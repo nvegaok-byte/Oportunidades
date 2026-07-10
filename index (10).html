@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Oportunidades — Consulta de precios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#FBF9F3;
+    --paper-2:#F4F0E6;
+    --ink:#22314E;
+    --ink-soft:#5A6B87;
+    --marigold:#E39A2B;
+    --marigold-deep:#C87F17;
+    --pine:#2E6E5A;
+    --pine-soft:#E1EDE7;
+    --line:#E4DFD4;
+    --danger:#B4472F;
+    --white:#FFFFFF;
+    --shadow:0 1px 2px rgba(34,49,78,.06), 0 6px 20px rgba(34,49,78,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Inter",system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 30px,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/30px 100%,
+      var(--paper);
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:22px 18px 80px}
+
+  /* Header */
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;flex-direction:column;gap:2px}
+  .brand h1{
+    font-family:"Fraunces",serif;font-weight:600;font-size:clamp(30px,6vw,44px);
+    line-height:1;margin:0;letter-spacing:-.01em;
+  }
+  .brand h1 .dot{color:var(--marigold)}
+  .brand p{margin:0;color:var(--ink-soft);font-size:14px}
+  .count-pill{
+    font-family:"Space Mono",monospace;font-size:12px;color:var(--pine);
+    background:var(--pine-soft);border:1px solid #CFE1D8;border-radius:999px;
+    padding:6px 12px;white-space:nowrap;align-self:center;
+  }
+
+  /* Cards / panels */
+  .panel{background:var(--white);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+
+  /* Empty / loader state */
+  .setup{padding:26px;text-align:center}
+  .setup h2{font-family:"Fraunces",serif;font-weight:600;font-size:22px;margin:0 0 6px}
+  .setup p{color:var(--ink-soft);margin:0 auto 18px;max-width:460px;font-size:14.5px}
+  .dropzone{
+    border:2px dashed #D5CFC0;border-radius:12px;padding:30px 20px;cursor:pointer;
+    background:var(--paper);transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover,.dropzone.drag{border-color:var(--marigold);background:#FDF6EA}
+  .dropzone .icon{font-size:30px;line-height:1}
+  .dropzone strong{display:block;margin-top:8px;font-weight:600}
+  .dropzone span{color:var(--ink-soft);font-size:13px}
+  .link-btn{background:none;border:none;color:var(--pine);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;padding:0;margin-top:14px}
+
+  .sheet-connect{margin-top:22px;padding-top:20px;border-top:1px solid var(--line);text-align:left}
+  .sc-title{font-weight:600;font-size:14px;margin-bottom:10px;text-align:center}
+  .sc-row{display:flex;gap:8px;max-width:520px;margin:0 auto}
+  .sc-row input{flex:1;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:14px;color:var(--ink);background:var(--white)}
+  .sc-row input:focus{outline:2px solid var(--pine);outline-offset:1px;border-color:transparent}
+  .sc-help{font-size:12.5px;color:var(--ink-soft);text-align:center;margin-top:10px;line-height:1.5}
+
+  /* Column mapping */
+  .map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+  .field{text-align:left}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
+  select{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--white);
+    font:inherit;color:var(--ink);appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A6B87' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
+
+  .btn{
+    font:inherit;font-weight:600;border-radius:10px;padding:11px 18px;cursor:pointer;border:1px solid transparent;
+    transition:transform .05s, background .15s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--ink);color:#fff}
+  .btn-primary:hover{background:#2C3F63}
+  .btn-ghost{background:var(--white);border-color:var(--line);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--ink-soft)}
+
+  /* Search */
+  .searchbar{position:relative;margin:0 0 16px}
+  .searchbar input{
+    width:100%;padding:15px 16px 15px 46px;font:inherit;font-size:16px;
+    border:1px solid var(--line);border-radius:12px;background:var(--white);box-shadow:var(--shadow);color:var(--ink);
+  }
+  .searchbar input:focus{outline:2px solid var(--marigold);outline-offset:1px;border-color:transparent}
+  .searchbar .mag{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-soft)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .chip{
+    font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--white);cursor:pointer;color:var(--ink-soft);font-weight:500;
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .spacer{flex:1}
+  .mini-link{font-size:13px;color:var(--ink-soft);background:none;border:none;cursor:pointer;text-decoration:underline}
+
+  /* layout with order rail */
+  .layout{display:grid;grid-template-columns:1fr;gap:20px}
+  @media(min-width:780px){ .layout{grid-template-columns:1fr 300px;align-items:start} }
+
+  /* Results */
+  .results{display:flex;flex-direction:column;gap:10px}
+  .item{
+    display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--white);
+    border:1px solid var(--line);border-radius:12px;
+  }
+  .item .info{flex:1;min-width:0}
+  .item .name{font-weight:600;font-size:15.5px;line-height:1.3}
+  .item .meta{display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap}
+  .cat{font-size:11.5px;background:var(--pine-soft);color:var(--pine);padding:2px 9px;border-radius:999px;font-weight:600}
+  .code{font-family:"Space Mono",monospace;font-size:11.5px;color:var(--ink-soft)}
+  .item .code{
+    font-size:15px;font-weight:700;color:var(--marigold);
+    background:var(--ink);padding:3px 10px;border-radius:6px;letter-spacing:.02em;
+  }
+
+  /* price tag */
+  .tag{
+    position:relative;font-family:"Space Mono",monospace;font-weight:700;font-size:15px;color:var(--ink);
+    background:var(--marigold);padding:8px 12px 8px 20px;border-radius:6px;white-space:nowrap;
+  }
+  .tag::before{content:"";position:absolute;left:7px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(34,49,78,.25)}
+  .add{
+    border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:9px;
+    width:38px;height:38px;font-size:20px;cursor:pointer;flex-shrink:0;line-height:1;font-weight:400;
+  }
+  .add:hover{border-color:var(--pine);color:var(--pine)}
+  .empty-results{text-align:center;color:var(--ink-soft);padding:40px 20px;font-size:14.5px}
+
+  /* Order / receipt */
+  .order{position:sticky;top:16px;padding:0;overflow:hidden}
+  .order .ohead{padding:16px 18px;border-bottom:1px dashed var(--line);display:flex;align-items:center;justify-content:space-between}
+  .order .ohead h3{font-family:"Fraunces",serif;font-weight:600;font-size:18px;margin:0}
+  .order .obody{padding:8px 18px;max-height:340px;overflow:auto}
+  .oline{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .oline:last-child{border-bottom:none}
+  .oline .oname{flex:1;font-size:13.5px;min-width:0}
+  .oline .oname small{display:block;color:var(--ink-soft);font-family:"Space Mono",monospace;font-size:11px}
+  .qty{display:flex;align-items:center;gap:6px}
+  .qty button{width:24px;height:24px;border:1px solid var(--line);background:var(--white);border-radius:6px;cursor:pointer;font-size:14px;line-height:1;color:var(--ink)}
+  .qty span{min-width:18px;text-align:center;font-family:"Space Mono",monospace;font-size:13px}
+  .oremove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;line-height:1;padding:2px}
+  .order .ofoot{padding:16px 18px;border-top:1px dashed var(--line)}
+  .totrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+  .totrow .lbl{color:var(--ink-soft);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  .totrow .tot{font-family:"Space Mono",monospace;font-weight:700;font-size:22px}
+  .order-empty{padding:30px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px}
+  .wa{width:100%;background:var(--pine);color:#fff;border:none;margin-bottom:8px}
+  .wa:hover{background:#25594A}
+  .clr{width:100%;background:none;border:none;color:var(--ink-soft);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
+
+  footer.foot{text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:34px}
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;
+    opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .hidden{display:none !important}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+  :focus-visible{outline:2px solid var(--marigold);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Oportunidades<span class="dot">.</span></h1>
+      <p>Librería · dibujo artístico · recursos bíblicos</p>
+    </div>
+    <div class="count-pill" id="countPill">Sin catálogo cargado</div>
+  </header>
+
+  <!-- SETUP / carga -->
+  <section id="setup" class="panel setup">
+    <h2>Cargá tu lista de precios</h2>
+    <p>Soltá el Excel que ya tenés (.xlsx o .csv). La app lee las columnas solas; después confirmás cuál es el nombre y cuál el precio.</p>
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Seleccionar archivo Excel">
+      <div class="icon">📄</div>
+      <strong>Soltá el archivo acá o tocá para elegirlo</strong>
+      <span>Formatos: .xlsx, .xls, .csv</span>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden" />
+    <div><button class="link-btn" id="sampleBtn">Probar con un catálogo de ejemplo</button></div>
+
+    <div class="sheet-connect">
+      <div class="sc-title">¿Tu lista está en Google Sheets?</div>
+      <div class="sc-row">
+        <input type="text" id="sheetUrl" placeholder="Pegá acá el link CSV de tu planilla…" autocomplete="off" />
+        <button class="btn btn-ghost" id="sheetBtn">Conectar</button>
+      </div>
+      <div class="sc-help">En tu planilla: <strong>Archivo › Compartir › Publicar en la web › CSV</strong>, copiás ese link y lo pegás acá.</div>
+    </div>
+
+    <!-- mapping (aparece después de leer) -->
+    <div id="mapping" class="hidden">
+      <div class="map-grid" id="mapGrid"></div>
+      <button class="btn btn-primary" id="confirmMap">Usar este catálogo</button>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="app" class="hidden">
+    <div class="searchbar">
+      <svg class="mag" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input type="text" id="search" placeholder="Buscá un artículo por nombre o código…" autocomplete="off" />
+    </div>
+    <div class="toolbar" id="cats"></div>
+
+    <div class="layout">
+      <div class="results" id="results"></div>
+
+      <aside class="panel order" id="order">
+        <div class="ohead"><h3>Pedido</h3><span class="code" id="orderCount">0 ítems</span></div>
+        <div class="obody" id="orderBody"></div>
+        <div class="ofoot" id="orderFoot"></div>
+      </aside>
+    </div>
+
+    <div style="margin-top:22px">
+      <button class="mini-link" id="changeFile">↺ Cargar otro archivo</button>
+    </div>
+  </section>
+
+  <footer class="foot">Oportunidades · emprendimiento familiar</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===========================================================
+   CONFIG — Pegá acá el link CSV de tu Google Sheet publicado.
+   Con esto la app carga sola al abrir (ideal para GitHub Pages).
+   Dejalo como "" si preferís cargar el Excel a mano cada vez.
+   Cómo obtenerlo: en la planilla, Archivo › Compartir ›
+   Publicar en la web › (elegí la hoja) › CSV › Publicar › copiar link.
+   =========================================================== */
+const CONFIG = {
+  SHEET_CSV_URL: ""
+};
+
+/* ===========================================================
+   CATÁLOGO — tus productos, ya cargados.
+   Podés editar precios acá mismo, o (mejor) pasar a Google Sheets
+   con CONFIG.SHEET_CSV_URL de arriba para actualizar desde la planilla.
+   =========================================================== */
+const CATALOG_DATA = [
+  {Codigo:'CR1', Descripcion:'Combo Regalo Chico',              Marca:'Santa FE',   Precio:'6.500,00'},
+  {Codigo:'CR2', Descripcion:'Combo Regalo Premium',            Marca:'Santa FE',   Precio:'12.000,00'},
+  {Codigo:'A1',  Descripcion:'Anotador Pequeño',                Marca:'Santa FE',   Precio:'1.400,00'},
+  {Codigo:'S1',  Descripcion:'Señalador con Iman x3',           Marca:'Santa FE',   Precio:'3.000,00'},
+  {Codigo:'CD1', Descripcion:'Cuaderno Tapa dura N1',           Marca:'Santa FE',   Precio:'11.000,00'},
+  {Codigo:'CD2', Descripcion:'Cuaderno Tapa dura N2',           Marca:'Santa FE',   Precio:'9.000,00'},
+  {Codigo:'CD3', Descripcion:'Cuaderno Tapa dura N3',           Marca:'Santa FE',   Precio:'7.000,00'},
+  {Codigo:'CF1', Descripcion:'Cuaderno Tapa Flexible N1',       Marca:'Santa FE',   Precio:'6.000,00'},
+  {Codigo:'CF2', Descripcion:'Cuaderno Tapa Flexible N2',       Marca:'Santa FE',   Precio:'5.000,00'},
+  {Codigo:'CF3', Descripcion:'Cuaderno Tapa Flexible N3',       Marca:'Santa FE',   Precio:'3.000,00'},
+  {Codigo:'LP',  Descripcion:'Lapiceras Motivo cristiano',      Marca:'Santa FE',   Precio:'1.500,00'},
+  {Codigo:'PS6', Descripcion:'Plancha Stickers x6',             Marca:'Santa FE',   Precio:'800,00'},
+  {Codigo:'IP',  Descripcion:'Iman Planificador',              Marca:'Santa FE',   Precio:'5.000,00'},
+  {Codigo:'BP',  Descripcion:'Block planificador',             Marca:'Santa FE',   Precio:'3.000,00'},
+  {Codigo:'IA',  Descripcion:'Iman Abecedario',                Marca:'Las Flores', Precio:'3.000,00'},
+  {Codigo:'IN',  Descripcion:'Iman Numeros',                   Marca:'Las Flores', Precio:'3.000,00'},
+  {Codigo:'BA',  Descripcion:'Bandera Argentina',              Marca:'Las Flores', Precio:'3.000,00'},
+  {Codigo:'PA',  Descripcion:'Paleta de acuarelas x12 colores',Marca:'Katana',     Precio:'4.000,00'},
+  {Codigo:'CM',  Descripcion:'Cartulina Magica chica',         Marca:'Las Flores', Precio:'2.500,00'},
+  {Codigo:'EA',  Descripcion:'Escarapela Argentina C/U',       Marca:'Las Flores', Precio:'1.000,00'},
+  {Codigo:'LI',  Descripcion:'Lapices Infinity x24',           Marca:'Maped',      Precio:'10.000,00'}
+];
+
+const ARS = new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:2});
+const norm = s => (s??'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+
+let RAW = [];          // filas crudas {col: valor}
+let HEADERS = [];      // nombres de columna del Excel
+let CATALOG = [];      // {name, price, cat, code}
+let MAP = {name:'', price:'', cat:'', code:''};
+let ORDER = [];        // {key, name, price, qty}
+let activeCat = 'Todos';
+
+const $ = id => document.getElementById(id);
+
+/* ---------- lectura de archivo ---------- */
+function parseWorkbook(data){
+  const wb = XLSX.read(data,{type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+  if(!rows.length){ showToast('El archivo no tiene datos.'); return; }
+  RAW = rows;
+  HEADERS = Object.keys(rows[0]);
+  guessMapping();
+  renderMapping();
+}
+
+function guessMapping(){
+  const find = keys => HEADERS.find(h => keys.some(k => norm(h).includes(k))) || '';
+  MAP.name  = find(['nombre','articulo','producto','detalle','descripcion','item']) || HEADERS[0] || '';
+  MAP.price = find(['precio','valor','importe','pvp','costo','venta','$']) || '';
+  MAP.cat   = find(['categoria','rubro','tipo','familia','seccion','grupo']);
+  MAP.code  = find(['codigo','cod','sku','id','articulo n','ref']);
+}
+
+function renderMapping(){
+  const opts = extra => `<option value="">${extra||'—'}</option>` + HEADERS.map(h=>`<option value="${h}">${h}</option>`).join('');
+  const sel = (id,label,val,extra)=>`
+    <div class="field">
+      <label for="${id}">${label}</label>
+      <select id="${id}">${opts(extra)}</select>
+    </div>`;
+  $('mapGrid').innerHTML =
+    sel('mName','Nombre del artículo','name') +
+    sel('mPrice','Precio','price') +
+    sel('mCat','Categoría (opcional)','cat','Sin categoría') +
+    sel('mCode','Código (opcional)','code','Sin código');
+  $('mName').value = MAP.name; $('mPrice').value = MAP.price;
+  $('mCat').value = MAP.cat;   $('mCode').value = MAP.code;
+  $('mapping').classList.remove('hidden');
+  $('mapping').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* precios en cualquier formato: 6500 · 6.500 · 6,500 · 6.500,00 · 6,500.00 · $6.500 */
+function parseMoney(v){
+  if(typeof v === 'number') return v;
+  let s = (v??'').toString().trim();
+  if(!s) return 0;
+  s = s.replace(/[^\d.,-]/g,'');
+  if(!s) return 0;
+  const hasDot = s.includes('.'), hasComma = s.includes(',');
+  if(hasDot && hasComma){
+    // el separador que aparece último es el decimal; el otro es de miles
+    if(s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g,'').replace(',','.');
+    else s = s.replace(/,/g,'');
+  } else if(hasComma){
+    const p = s.split(',');
+    // "6,500" (3 dígitos al final) o varias comas -> separador de miles
+    if(p.length > 2 || p[p.length-1].length === 3) s = s.replace(/,/g,'');
+    else s = s.replace(',','.');
+  } else if(hasDot){
+    const p = s.split('.');
+    // "6.500" (3 dígitos al final) o varios puntos -> separador de miles
+    if(p.length > 2 || p[p.length-1].length === 3) s = s.replace(/\./g,'');
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function buildCatalog(){
+  CATALOG = RAW.map(r=>({
+    name : (r[MAP.name]??'').toString().trim(),
+    price: parseMoney(r[MAP.price]),
+    cat  : MAP.cat  ? (r[MAP.cat]??'').toString().trim()  : '',
+    code : MAP.code ? (r[MAP.code]??'').toString().trim() : ''
+  })).filter(x=>x.name);
+}
+
+/* ---------- render app ---------- */
+function startApp(){
+  buildCatalog();
+  if(!CATALOG.length){ showToast('No encontré artículos con nombre. Revisá el mapeo.'); return; }
+  $('setup').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  updateCount();
+  renderCats();
+  renderResults();
+  renderOrder();
+}
+
+function updateCount(){ $('countPill').textContent = CATALOG.length + ' artículos'; }
+
+function renderCats(){
+  const cats = ['Todos', ...Array.from(new Set(CATALOG.map(c=>c.cat).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'es'))];
+  if(cats.length<=1){ $('cats').innerHTML=''; return; }
+  $('cats').innerHTML = cats.map(c=>`<button class="chip ${c===activeCat?'active':''}" data-cat="${c.replace(/"/g,'&quot;')}">${c||'Sin categoría'}</button>`).join('');
+  $('cats').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{activeCat=b.dataset.cat;renderCats();renderResults();});
+}
+
+function renderResults(){
+  const q = norm($('search').value);
+  let list = CATALOG.filter(c=>{
+    const okCat = activeCat==='Todos' || c.cat===activeCat;
+    const okQ = !q || norm(c.name).includes(q) || norm(c.code).includes(q);
+    return okCat && okQ;
+  }).slice(0,200);
+
+  if(!list.length){
+    $('results').innerHTML = `<div class="empty-results">No hay artículos que coincidan con “${$('search').value}”.<br>Probá con otra palabra o revisá cómo está escrito en tu Excel.</div>`;
+    return;
+  }
+  $('results').innerHTML = list.map((c,i)=>{
+    const idx = CATALOG.indexOf(c);
+    return `<div class="item">
+      <div class="info">
+        <div class="name">${esc(c.name)}</div>
+        <div class="meta">
+          ${c.cat?`<span class="cat">${esc(c.cat)}</span>`:''}
+          ${c.code?`<span class="code">#${esc(c.code)}</span>`:''}
+        </div>
+      </div>
+      <div class="tag">${ARS.format(c.price)}</div>
+      <button class="add" data-i="${idx}" aria-label="Agregar al pedido">+</button>
+    </div>`;
+  }).join('');
+  $('results').querySelectorAll('.add').forEach(b=>b.onclick=()=>addToOrder(+b.dataset.i));
+}
+
+/* ---------- pedido ---------- */
+function addToOrder(i){
+  const c = CATALOG[i];
+  const key = c.name + '|' + c.code;
+  const found = ORDER.find(o=>o.key===key);
+  if(found) found.qty++;
+  else ORDER.push({key, name:c.name, price:c.price, qty:1});
+  renderOrder();
+  showToast('Agregado: ' + c.name);
+}
+function changeQty(key,d){
+  const o = ORDER.find(x=>x.key===key); if(!o) return;
+  o.qty += d;
+  if(o.qty<=0) ORDER = ORDER.filter(x=>x.key!==key);
+  renderOrder();
+}
+function renderOrder(){
+  const n = ORDER.reduce((s,o)=>s+o.qty,0);
+  $('orderCount').textContent = n + (n===1?' ítem':' ítems');
+  if(!ORDER.length){
+    $('orderBody').innerHTML = `<div class="order-empty">Tocá el <strong>+</strong> de un artículo para armar un pedido y copiarlo a WhatsApp.</div>`;
+    $('orderFoot').innerHTML = '';
+    return;
+  }
+  $('orderBody').innerHTML = ORDER.map(o=>`
+    <div class="oline">
+      <div class="oname">${esc(o.name)}<small>${ARS.format(o.price)} c/u</small></div>
+      <div class="qty">
+        <button data-k="${o.key}" data-d="-1">−</button>
+        <span>${o.qty}</span>
+        <button data-k="${o.key}" data-d="1">+</button>
+      </div>
+      <button class="oremove" data-rk="${o.key}" aria-label="Quitar">✕</button>
+    </div>`).join('');
+  const total = ORDER.reduce((s,o)=>s+o.price*o.qty,0);
+  $('orderFoot').innerHTML = `
+    <div class="totrow"><span class="lbl">Total</span><span class="tot">${ARS.format(total)}</span></div>
+    <button class="btn wa" id="waBtn">Copiar pedido para WhatsApp</button>
+    <button class="clr" id="clrBtn">Vaciar pedido</button>`;
+  $('orderBody').querySelectorAll('.qty button').forEach(b=>b.onclick=()=>changeQty(b.dataset.k,+b.dataset.d));
+  $('orderBody').querySelectorAll('.oremove').forEach(b=>b.onclick=()=>{ORDER=ORDER.filter(x=>x.key!==b.dataset.rk);renderOrder();});
+  $('waBtn').onclick = copyOrder;
+  $('clrBtn').onclick = ()=>{ORDER=[];renderOrder();};
+}
+
+function copyOrder(){
+  const lines = ORDER.map(o=>`• ${o.qty} × ${o.name} — ${ARS.format(o.price*o.qty)}`);
+  const total = ORDER.reduce((s,o)=>s+o.price*o.qty,0);
+  const msg = `*Oportunidades* 🛒\n\n${lines.join('\n')}\n\n*Total: ${ARS.format(total)}*\n\n¡Gracias por tu compra! 🙌`;
+  navigator.clipboard.writeText(msg).then(
+    ()=>showToast('Pedido copiado ✓ Pegalo en WhatsApp'),
+    ()=>{ const ta=document.createElement('textarea');ta.value=msg;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast('Pedido copiado ✓'); }
+  );
+}
+
+/* ---------- utilidades ---------- */
+function esc(s){return (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+let toastT;
+function showToast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+/* ---------- catálogo embebido (tus datos) ---------- */
+function loadEmbedded(){
+  RAW = CATALOG_DATA.slice();
+  HEADERS = Object.keys(RAW[0]);
+  MAP = {name:'Descripcion', price:'Precio', cat:'Marca', code:'Codigo'};
+  startApp();
+}
+
+/* ---------- catálogo de ejemplo ---------- */
+function loadSample(){
+  RAW = [
+    {Artículo:'Cuaderno rayado A4 tapa dura', Categoría:'Librería', Precio:'$4.200,00', Código:'LB-001'},
+    {Artículo:'Resma A4 75g (500 hojas)', Categoría:'Librería', Precio:'$9.800,00', Código:'LB-014'},
+    {Artículo:'Set 12 lápices acuarelables', Categoría:'Dibujo artístico', Precio:'$15.500,00', Código:'AR-102'},
+    {Artículo:'Block Canson A3 200g', Categoría:'Dibujo artístico', Precio:'$12.300,00', Código:'AR-118'},
+    {Artículo:'Marcadores pincel x24', Categoría:'Dibujo artístico', Precio:'$28.900,00', Código:'AR-133'},
+    {Artículo:'Biblia Reina-Valuera 1960 tapa símil cuero', Categoría:'Recursos bíblicos', Precio:'$32.000,00', Código:'BB-201'},
+    {Artículo:'Devocional diario 365', Categoría:'Recursos bíblicos', Precio:'$18.500,00', Código:'BB-210'},
+    {Artículo:'Separadores de libro (pack x5)', Categoría:'Recursos bíblicos', Precio:'$3.500,00', Código:'BB-222'},
+    {Artículo:'Lapicera roller azul', Categoría:'Librería', Precio:'$1.800,00', Código:'LB-030'},
+    {Artículo:'Témpera 250ml blanca', Categoría:'Dibujo artístico', Precio:'$5.400,00', Código:'AR-140'}
+  ];
+  HEADERS = Object.keys(RAW[0]);
+  guessMapping();
+  renderMapping();
+}
+
+/* ---------- eventos ---------- */
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = e => parseWorkbook(new Uint8Array(e.target.result));
+  reader.onerror = ()=>showToast('No pude leer el archivo. Probá con .xlsx o .csv.');
+  reader.readAsArrayBuffer(file);
+}
+
+$('fileInput').addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+$('dropzone').addEventListener('click', ()=>$('fileInput').click());
+$('dropzone').addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();$('fileInput').click();} });
+['dragover','dragenter'].forEach(ev=>$('dropzone').addEventListener(ev,e=>{e.preventDefault();$('dropzone').classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>$('dropzone').addEventListener(ev,e=>{e.preventDefault();$('dropzone').classList.remove('drag');}));
+$('dropzone').addEventListener('drop', e=>{ if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+$('sampleBtn').addEventListener('click', loadSample);
+
+/* ---------- Google Sheets (CSV publicado) ---------- */
+function normalizeSheetUrl(url){
+  url = url.trim();
+  // Link "Publicado en la web": .../d/e/2PACX.../pub  o  /pubhtml
+  if(url.includes('/d/e/')){
+    url = url.replace(/\/pubhtml[^?]*/, '/pub');          // por si copió la versión web
+    if(!/[?&]output=csv/.test(url)){
+      url += (url.includes('?') ? '&' : '?') + 'output=csv';
+    }
+    return url;
+  }
+  // Link de edición con ID crudo -> lo pasamos al endpoint CSV (gviz)
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if(m){
+    const gid = (url.match(/[#&?]gid=([0-9]+)/)||[])[1];
+    return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv${gid?'&gid='+gid:''}`;
+  }
+  return url;
+}
+
+async function loadFromSheet(url){
+  const finalUrl = normalizeSheetUrl(url);
+  try{
+    showToast('Cargando catálogo…');
+    const res = await fetch(finalUrl);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    if(/^\s*</.test(text)) throw new Error('vino una página web, no CSV');
+    const wb = XLSX.read(text,{type:'string'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+    if(!rows.length) throw new Error('sin filas');
+    RAW = rows; HEADERS = Object.keys(rows[0]);
+    guessMapping();
+    if(MAP.name && MAP.price) startApp();     // detectó todo -> arranca directo
+    else renderMapping();                      // si no, que confirme columnas
+  }catch(err){
+    if(location.protocol === 'file:')
+      showToast('Estás abriendo el archivo desde tu PC. Subilo a la web (GitHub Pages) y ahí sí lee la planilla.');
+    else
+      showToast('No pude leer la planilla. Revisá que la publicaste como CSV (no como Página web).');
+  }
+}
+
+$('sheetBtn').addEventListener('click', ()=>{
+  const u = $('sheetUrl').value.trim();
+  if(!u){ showToast('Pegá el link CSV de tu Google Sheet.'); return; }
+  loadFromSheet(u);
+});
+$('sheetUrl').addEventListener('keydown', e=>{ if(e.key==='Enter') $('sheetBtn').click(); });
+
+$('confirmMap').addEventListener('click', ()=>{
+  MAP.name=$('mName').value; MAP.price=$('mPrice').value; MAP.cat=$('mCat').value; MAP.code=$('mCode').value;
+  if(!MAP.name || !MAP.price){ showToast('Elegí al menos la columna de Nombre y la de Precio.'); return; }
+  startApp();
+});
+
+$('search').addEventListener('input', renderResults);
+$('changeFile').addEventListener('click', ()=>{
+  $('app').classList.add('hidden'); $('setup').classList.remove('hidden');
+  $('mapping').classList.add('hidden'); $('fileInput').value=''; $('search').value=''; activeCat='Todos';
+});
+
+/* ---------- arranque automático (para GitHub Pages) ---------- */
+if(CONFIG.SHEET_CSV_URL){ loadFromSheet(CONFIG.SHEET_CSV_URL); }
+else if(CATALOG_DATA.length){ loadEmbedded(); }
+</script>
+</body>
+</html>
